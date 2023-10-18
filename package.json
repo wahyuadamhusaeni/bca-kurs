@@ -1,0 +1,15 @@
+{
+  "name": "bca-kurs",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "axios": "^0.21.1",
+    "cheerio": "^1.0.0-rc.10",
+    "dotenv": "^16.3.1",
+    "express": "^4.17.1"
+  }
+}
