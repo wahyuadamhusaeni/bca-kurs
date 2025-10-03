@@ -1,82 +1,56 @@
-const getPage = require("../getPage");
+const puppeteer = require('puppeteer');
 
 const scrapeBNI = async () => {
   try {
-    const url = "https://www.bni.co.id/id-id/beranda/informasi-valas";
-    const $ = await getPage(url);
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
 
-    // Tabel Special Rates
-    const specialRatesTable = $('table.table_info_counter');
-    let usdData = null;
+    // Set User-Agent 
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
+    await page.goto('https://www.bni.co.id/id-id/beranda/informasi-valas', {
+      waitUntil: 'networkidle2'
+    });
 
-    if (specialRatesTable.length > 0) {
-      specialRatesTable.find('tbody tr').each((index, element) => {
-        const currency = $(element).find('td').eq(0).text().trim();
-        if (currency === 'USD') {
-          const buyRate = $(element).find('td').eq(1).text().trim().replace(/[.,]/g, '').replace(/\s/g, '');
-          const sellRate = $(element).find('td').eq(2).text().trim().replace(/[.,]/g, '').replace(/\s/g, '');
-          
-          if (buyRate && sellRate) {
-            usdData = {
-              mata_uang: 'USD',
-              beli: parseFloat(buyRate) / 100, 
-              jual: parseFloat(sellRate) / 100 
-            };
-          }
+    // Data USD
+    const usdRow = await page.evaluate(() => {
+      const rows = document.querySelectorAll('table tbody tr');
+      for (const row of rows) {
+        const cells = row.querySelectorAll('td');
+        if (cells[0].innerText.trim().toUpperCase() === 'USD') {
+          return {
+            buy: cells[1].innerText.trim(),
+            sell: cells[2].innerText.trim()
+          };
         }
-      });
-    }
+      }
+      return null;
+    });
 
-    // Search all tables for USD
-    if (!usdData) {
-      $('table').each((tableIndex, table) => {
-        $(table).find('tr').each((rowIndex, row) => {
-          const cells = $(row).find('td');
-          if (cells.length >= 3) {
-            const currency = cells.eq(0).text().trim();
-            if (currency === 'USD') {
-              const buyRate = cells.eq(1).text().trim().replace(/[.,]/g, '').replace(/\s/g, '');
-              const sellRate = cells.eq(2).text().trim().replace(/[.,]/g, '').replace(/\s/g, '');
-              
-              if (buyRate && sellRate) {
-                usdData = {
-                  mata_uang: 'USD',
-                  beli: parseFloat(buyRate) / 100,
-                  jual: parseFloat(sellRate) / 100
-                };
-              }
-            }
-          }
-        });
-      });
-    }
+    await browser.close();
 
-    // Fallback estimation
-    if (!usdData) {
-      usdData = {
-        mata_uang: 'USD',
-        beli: 16720.00,
-        jual: 16760.00,
+    if (!usdRow) {
+      return {
+        bank: 'BNI',
+        status: 'no_data',
+        last_updated: new Date().toISOString(),
+        data: []
       };
     }
 
     return {
-      bank: "BNI",
-      status: "success",
+      bank: 'BNI',
+      status: 'success',
       last_updated: new Date().toISOString(),
-      data: [usdData]
+      data: [usdRow.buy, usdRow.sell]
     };
 
   } catch (error) {
     return {
-      bank: "BNI",
-      status: "success",
+      bank: 'BNI',
+      status: 'error',
+      error: error.message,
       last_updated: new Date().toISOString(),
-      data: [{
-        mata_uang: 'USD',
-        beli: 16720.00,
-        jual: 16760.00,
-      }]
+      data: []
     };
   }
 };

@@ -27,21 +27,11 @@ module.exports = () => {
       
       // Filter USD
       if (currency === "USD") {
-        bcaData.data.push({
-          mata_uang: currency,
-          eRate: {
-            eRate_beli: $(elm).find(erateBuyPoint).text().trim(),
-            eRate_jual: $(elm).find(erateSellPoint).text().trim(),
-          },
-          TTCounter: {
-            TTCounter_beli: $(elm).find(ttBuyPoint).text().trim(),
-            TTCounter_jual: $(elm).find(ttSellPoint).text().trim(),
-          },
-          BankNotes: {
-            BankNotes_beli: $(elm).find(bankNotesBuyPoint).text().trim(),
-            BankNotes_jual: $(elm).find(bankNotesSellPoint).text().trim(),
-          },
-        });
+        const buyRate = $(elm).find(erateBuyPoint).text().trim();
+        const sellRate = $(elm).find(erateSellPoint).text().trim();
+        
+        // Format 
+        bcaData.data.push(buyRate, sellRate);
       }
     });
 
