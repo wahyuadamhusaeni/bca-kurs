@@ -1,40 +1,38 @@
-const page = require("./getPage");
+const scrapeBCA = require("./scrapers/bca");
+const scrapeMandiri = require("./scrapers/mandiri");
+// const scrapeBNI = require("./scrapers/bni");
+const scrapeBRI = require("./scrapers/bri");
 
-const dateUpdatePoint = "span.o-kurs-refresh-desc span.refresh-date";
-const currencyPoint = "td.sticky-col p";
-const erateSellPoint = "td p[rate-type=ERate-sell]";
-const erateBuyPoint = "td p[rate-type=ERate-buy]";
-const ttSellPoint = "td p[rate-type=TT-sell]";
-const ttBuyPoint = "td p[rate-type=TT-buy]";
-const bankNotesSellPoint = "td p[rate-type=BN-sell]";
-const bankNotesBuyPoint = "td p[rate-type=BN-buy]";
+module.exports = Promise.all([
 
-var dataList = [];
-
-module.exports = page().then(($) => {
-  $(dateUpdatePoint).each((i, elm) => {
-    dataList.push({
-      status: "success",
-      last_updated: $(elm).text().trim(),
-      data: [],
-    });
+  // All bank scrapers
+  scrapeBCA(),
+  scrapeMandiri(),
+  // scrapeBNI(),
+  scrapeBRI()
+]).then(results => {
+  // Extract e-rate sell values (index 1) from each bank's data array
+  const data = results.map(result => {
+    if (result.data && result.data.length >= 2) {
+      return result.data[1].replace(/[.,]00$/, "").replace(/\./g, "");
+    }
+    return 0; // Default value if no data available
   });
-  $("tbody tr").each((i, elm) => {
-    dataList[0].data.push({
-      mata_uang: $(elm).find(currencyPoint).text().trim(),
-      eRate: {
-        eRate_beli: $(elm).find(erateBuyPoint).text().trim(),
-        eRate_jual: $(elm).find(erateSellPoint).text().trim(),
-      },
-      TTCounter: {
-        TTCounter_beli: $(elm).find(ttBuyPoint).text().trim(),
-        TTCounter_jual: $(elm).find(ttSellPoint).text().trim(),
-      },
-      BankNotes: {
-        BankNotes_beli: $(elm).find(bankNotesBuyPoint).text().trim(),
-        BankNotes_jual: $(elm).find(bankNotesSellPoint).text().trim(),
-      },
-    });
-  });
-  return dataList;
+
+  // Sort data descending (largest first)
+  data.sort((a, b) => Number(b) - Number(a));
+
+  return {
+    status: "success",
+    timestamp: new Date().toISOString(),
+    data: data,
+    // result: results
+  };
+}).catch(error => {
+  return {
+    status: "error",
+    message: error.message,
+    timestamp: new Date().toISOString(),
+    data: []
+  };
 });
